@@ -1,0 +1,67 @@
+name: Headsup release
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build OpenCode CLI
+        env:
+          OPENCODE_VERSION: 1.18.23-headsup.${{ github.run_number }}
+        run: bun ./packages/opencode/script/build.ts
+
+      - name: Package Linux ARM64 binary
+        run: |
+          test -x packages/opencode/dist/opencode-linux-arm64/bin/opencode
+          packages/opencode/dist/opencode-linux-arm64/bin/opencode --version
+          tar -czf opencode.tar.gz -C packages/opencode/dist/opencode-linux-arm64/bin opencode
+
+      - name: Determine blob path
+        id: blob
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "path=opencode/${GITHUB_REF_NAME}-arm64/opencode.tar.gz" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=opencode/${GITHUB_REF_NAME}-latest-arm64/opencode.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to Azure Blob Storage
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          az login --service-principal \
+            --username "$AZURE_CLIENT_ID" \
+            --password "$AZURE_CLIENT_SECRET" \
+            --tenant "$AZURE_TENANT_ID"
+          az storage blob upload \
+            --account-name huareleases --container-name releases \
+            --name "${{ steps.blob.outputs.path }}" \
+            --file opencode.tar.gz --overwrite true --auth-mode login
+
+      - name: Update dev
+        if: github.ref == 'refs/heads/main'
+        run: |
+          az vm run-command invoke \
+            --resource-group "${{ vars.DEPLOY_RG }}" \
+            --name "${{ vars.DEPLOY_HOST }}" \
+            --command-id RunShellScript \
+            --scripts 'bash /opt/headsup/tools/update.sh --app opencode --version main-latest --force' \
+            --query 'value[0].message' --output tsv
