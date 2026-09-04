@@ -15,6 +15,17 @@ function send(args: string[]) {
   })
 }
 
+function setFrameText(text: string) {
+  queue = queue.then(async () => {
+    try {
+      const process = Bun.spawn({ cmd: ["wsh", "setmeta", `frame:text=${text}`], stdout: "ignore", stderr: "ignore" })
+      await process.exited
+    } catch {
+      // Outside WaveTerm, wsh is unavailable and notifications are intentionally disabled.
+    }
+  })
+}
+
 function isShellError(output: string) {
   return /command not found|permission denied|no such file or directory|not recognized as an internal or external command/i.test(output)
 }
@@ -30,9 +41,18 @@ const tui: TuiPlugin = async (api) => {
     return owned.has(sessionID) && !api.state.session.get(sessionID)?.parentID
   }
 
+  function topic(sessionID: string) {
+    const title = api.state.session.get(sessionID)?.title
+    if (!title || title.startsWith("New session - ")) return
+    return title
+  }
+
   function notify(sessionID: string, status: string, message: string, lifecycle = "terminal", beep = false) {
     if (!owns(sessionID)) return
     const args = ["--status", status, "--lifecycle", lifecycle]
+    if (api.state.path.directory) args.push("--workdir", api.state.path.directory)
+    const sessionTopic = topic(sessionID)
+    if (sessionTopic) args.push("--topic", sessionTopic)
     if (beep) args.push("--beep")
     args.push(message)
     send(args)
@@ -47,6 +67,12 @@ const tui: TuiPlugin = async (api) => {
         return null
       },
     },
+  })
+
+  api.event.on("session.updated", (event) => {
+    const { info, sessionID } = event.properties
+    if (!owns(sessionID) || info.parentID || !info.title || info.title.startsWith("New session - ")) return
+    setFrameText(`${api.state.path.directory} (${info.title})`)
   })
 
   api.event.on("session.status", (event) => {
