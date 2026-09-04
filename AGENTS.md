@@ -1,3 +1,9 @@
+- This is the Headsup fork of OpenCode. Use it only for narrowly scoped fixes required by Headsup deployments.
+- Keep fork changes isolated and self-contained wherever possible. Prefer fork-owned locations such as `packages/tui/src/headsup/` over broad changes to upstream-owned code.
+- Preserve upstream syncability: avoid unrelated refactors, formatting-only churn, generated-file changes, and new dependencies unless they are necessary for the fix.
+- Keep the fork diff minimal and document non-obvious fork-specific behavior near the code it affects.
+- For commits, pushes, deployments, environments, SSH access, and logs, read `@~/prompts/docs/deployment.md` when relevant. In particular, "push" means GitHub only; it is not a deployment.
+
 - To regenerate the legacy JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit `src/generated` or `src/generated-effect` directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk-next` composes Client, Core, and Server.
