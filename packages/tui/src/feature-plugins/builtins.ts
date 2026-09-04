@@ -10,6 +10,7 @@ import SidebarTodo from "./sidebar/todo"
 import DiffViewer from "./system/diff-viewer"
 import Notifications from "./system/notifications"
 import PluginManager from "./system/plugins"
+import WaveTerm from "./system/waveterm"
 import WhichKey from "./system/which-key"
 
 export type BuiltinTuiPlugin = Omit<TuiPluginModule, "id"> & {
@@ -29,6 +30,7 @@ export function createBuiltinPlugins(options: { experimentalEventSystem: boolean
     SidebarFiles,
     SidebarFooter,
     Notifications,
+    WaveTerm,
     PluginManager,
     WhichKey,
     DiffViewer,
