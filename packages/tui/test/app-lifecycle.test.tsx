@@ -69,7 +69,7 @@ test("app.exit prints the session epilogue after scoped cleanup", async () => {
     if (url.pathname === "/session")
       return json([
         {
-          id: "dummy",
+          id: "ses_dummy",
           title: "Demo session",
           slug: "dummy",
           projectID: "project",
@@ -119,7 +119,7 @@ test("app.exit prints the session epilogue after scoped cleanup", async () => {
     await task
 
     expect(stdout).toContain("Demo session")
-    expect(stdout).toContain("opencode -s dummy")
+    expect(stdout).toContain("opencode -s ses_dummy")
   } finally {
     process.stdout.write = originalWrite
     if (!setup.renderer.isDestroyed) setup.renderer.destroy()
